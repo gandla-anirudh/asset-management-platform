@@ -240,7 +240,7 @@ app.use(express.static(path.join(__dirname, 'frontend/build')));
 
 // 2. IMPORTANT: Catch-all route for any other request
 // This tells the server to always send back 'index.html' for any URL
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
 });
 
