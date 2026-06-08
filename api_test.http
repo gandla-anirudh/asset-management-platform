@@ -1,0 +1,51 @@
+### Test 1: Add a brand new asset to our MongoDB Database
+POST http://localhost:5000/api/assets
+Content-Type: application/json
+
+{
+    "name": "HP EliteBook Laptop",
+    "category": "Electronics",
+    "description": "Intel i7, 16GB RAM, 512GB SSD for development team use.",
+    "quantityAvailable": 5,
+    "status": "Available"
+}
+
+###
+
+### Test 2: Read and retrieve all assets from our Database
+GET http://localhost:5000/api/assets
+### Test 3: Register a brand new Admin User
+POST http://localhost:5000/api/auth/register
+Content-Type: application/json
+
+{
+    "name": "Anirudh boss",
+    "email": "admin@test.com",
+    "password": "mypassword123",
+    "role": "Admin"
+}
+### Test 4: Log in to get your security token pass
+POST http://localhost:5000/api/auth/login
+Content-Type: application/json
+
+{
+    "email": "anirudh@iitr.ac.in",
+    "password": "securepassword123"
+}
+### Test 5: Submit a Booking Request for an item
+POST http://localhost:5000/api/bookings
+Content-Type: application/json
+
+{
+    "userId": "6a245f24e6e0b10188d9cffa",
+    "assetId": "6a245df823ca17e7e86d8096",
+    "startDate": "2026-06-10",
+    "endDate": "2026-06-15"
+}
+### Test 6: Admin approves the booking request 
+PUT http://localhost:5000/api/bookings/6a24635bf8b384f9d2c3b508/status
+Content-Type: application/json
+
+{
+    "status": "Approved"
+}

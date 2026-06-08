@@ -1,0 +1,15 @@
+{
+  "name": "Asset Management Platform Workspace",
+  "forwardPorts": [3000, 5000],
+  "portsAttributes": {
+    "3000": {
+      "label": "React Frontend",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    },
+    "5000": {
+      "label": "Node Backend Express API",
+      "visibility": "public"
+    }
+  }
+}
