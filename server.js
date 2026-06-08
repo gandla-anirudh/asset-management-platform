@@ -232,7 +232,7 @@ app.get('/api/audit-logs', async (req, res) => {
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-const PORT = process.env.PORT || 5000;
+
 const path = require('path');
 
 // 1. Serve static files from the frontend build folder
