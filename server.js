@@ -233,4 +233,17 @@ app.get('/api/audit-logs', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(` System engine listening on Port ${PORT}...`));
+const path = require('path');
+
+// 1. Serve static files from the frontend build folder
+app.use(express.static(path.join(__dirname, 'frontend/build')));
+
+// 2. IMPORTANT: Catch-all route for any other request
+// This tells the server to always send back 'index.html' for any URL
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
+});
+
+// 3. Your existing app.listen code
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`System engine listening on Port ${PORT}...`));
