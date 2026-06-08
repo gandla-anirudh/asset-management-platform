@@ -4,6 +4,8 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 
 const app = express();
+const morgan = require('morgan');
+app.use(morgan('dev')); // Now every incoming request shows up in your Render logs automatically
 
 // ================= MIDDLEWARE LAYERS =================
 app.use(express.json());
@@ -240,7 +242,16 @@ app.use(express.static(path.join(__dirname, 'frontend/build')));
 
 // 2. IMPORTANT: Catch-all route for any other request
 // This tells the server to always send back 'index.html' for any URL
-app.get('/*', (req, res) => {
+// 1. Serve static files (React build)
+app.use(express.static(path.join(__dirname, 'frontend/build')));
+
+// 2. Middleware Fallback (The "Safe" way)
+app.use((req, res, next) => {
+  // If the request is for an API route, let it continue to your API logic
+  if (req.url.startsWith('/api')) {
+    return next();
+  }
+  // Otherwise, serve the React index.html
   res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'));
 });
 
