@@ -47,7 +47,7 @@ function App() {
   const [bookingDurations, setBookingDurations] = useState({});
   const [bookingQuantities, setBookingQuantities] = useState({}); // <-- ONLY NEW STATE
 
-  const BACKEND_URL = 'https://reimagined-space-eureka-5g7vr5x654gqh74g9-5000.app.github.dev';
+  const BACKEND_URL = '';
 
   // ================= 2-SECOND LIVE REFRESH ENGINE =================
   const fetchAllData = (userId = null, isSilent = false) => {
