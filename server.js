@@ -30,6 +30,12 @@ const User = mongoose.model('User', userSchema);
 
 const assetSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  // Inside your assetSchema definition, add this chunk:
+  healthStatus: { 
+    type: String, 
+    enum: ['Perfect', 'Good', 'Needs Repair', 'Damaged'],
+    default: 'Perfect' 
+  },
   category: { type: String, required: true },
   description: { type: String, required: true },
   quantityAvailable: { type: Number, required: true, min: 0 },
@@ -229,9 +235,29 @@ app.get('/api/analytics/dashboard', async (req, res) => {
 
 app.get('/api/audit-logs', async (req, res) => {
   try {
-    const logs = await AuditLog.find().sort({ timestamp: -1 });
-    res.status(200).json(logs);
-  } catch (error) { res.status(500).json({ error: error.message }); }
+    const { timeframe } = req.query;
+    let query = {}; // Default: get all logs
+
+    const now = new Date();
+    
+    // Check what the frontend is asking for
+    if (timeframe === 'today') {
+      const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+      query.createdAt = { $gte: startOfDay };
+    } else if (timeframe === 'week') {
+      const lastWeek = new Date(now.setDate(now.getDate() - 7));
+      query.createdAt = { $gte: lastWeek };
+    } else if (timeframe === 'month') {
+      const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
+      query.createdAt = { $gte: lastMonth };
+    }
+
+    // Fetch from MongoDB using the time filter
+    const logs = await AuditLog.find(query).sort({ createdAt: -1 });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching logs" });
+  }
 });
 
 

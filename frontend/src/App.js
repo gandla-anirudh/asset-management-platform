@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+// Helper function to create colored health badges
+function HealthBadge({ status }) {
+  let badgeColor = '#28a745'; // Green for Perfect/Good
+  if (status === 'Needs Repair') badgeColor = '#ffc107'; // Yellow
+  if (status === 'Damaged') badgeColor = '#dc3545'; // Red
+
+  return (
+    <span style={{ backgroundColor: badgeColor, color: 'white', padding: '4px 8px', borderRadius: '12px', fontSize: '0.8rem', marginLeft: '10px' }}>
+      {status || 'Perfect'}
+    </span>
+  );
+}
 
 function App() {
   const [assets, setAssets] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [userHistory, setUserHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('discover');
   
   // ================= EXPANDED DATA STATES =================
   const [auditLogs, setAuditLogs] = useState([]);
@@ -318,6 +331,20 @@ function App() {
         </div>
       </div>
 
+      {/* --- NEW TABBED NAVIGATION MENU --- */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
+        <button onClick={() => setActiveTab('discover')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Discover Inventories</button>
+        <button onClick={() => setActiveTab('issuance')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Issuance</button>
+        <button onClick={() => setActiveTab('audit')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Audit Logs</button>
+        
+        {/* Hides Personal Log if the user is an Admin */}
+        {user && user.role !== 'Admin' && (
+          <button onClick={() => setActiveTab('personal')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Your Personal Log</button>
+        )}
+      </div>
+
+      {/* The rest of your code (like the activeTab wrappers) will go right below this! */}
+
       {/* INSIGHTS SUMMARIES CARD NODES */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderTop: '4px solid #3b82f6' }}>
@@ -403,7 +430,7 @@ function App() {
             </select>
           </div>
 
-          <h2 style={{ fontSize: '18px', color: '#334155', marginBottom: '15px' }}>📦 Live Discoverable Inventory</h2>
+          <h2 style={{ fontSize: '18px', color: '#334155', marginBottom: '15px' }}> Live Discoverable Inventory</h2>
           {loading && Object.keys(dashboardData.summary).length === 0 ? <p>Loading data layers...</p> : (
             <div>
               {filteredAssets.map(item => (
@@ -412,6 +439,7 @@ function App() {
                     <div>
                       <span style={{ fontSize: '11px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '12px', color: '#64748b', fontWeight: 'bold' }}>{item.category}</span>
                       <h3 style={{ margin: '5px 0', fontSize: '16px', color: '#1e293b' }}>{item.name}</h3>
+                      {item.quantityAvailable < 1 && <HealthBadge status={item.healthStatus} />}
                       <p style={{ margin: '0', fontSize: '13px', color: '#64748b' }}>{item.description}</p>
                       <p style={{ margin: '5px 0 0 0', fontSize: '12px', fontWeight: '500', color: item.quantityAvailable > 0 ? '#10b981' : '#ef4444' }}>Available Units: {item.quantityAvailable}</p>
                     </div>
@@ -475,7 +503,7 @@ function App() {
 
           {user && (
             <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              <h3 style={{ marginTop: 0, fontSize: '15px', color: '#1e293b' }}>📋 Your Personal Borrowing History</h3>
+              <h3 style={{ marginTop: 0, fontSize: '15px', color: '#1e293b' }}> Your Personal Borrowing History</h3>
               {userHistory.length === 0 ? <p style={{ fontSize: '13px', color: '#64748b' }}>No record logs logged under this profile ticket.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {userHistory.map(h => (
