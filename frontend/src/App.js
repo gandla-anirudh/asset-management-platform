@@ -23,6 +23,7 @@ function App() {
   // ================= EXPANDED DATA STATES =================
   const [auditLogs, setAuditLogs] = useState([]);
   const [selectedActionFilter, setSelectedActionFilter] = useState('All Actions'); 
+  const [selectedAuditTimeframe, setSelectedAuditTimeframe] = useState('all');
   const [dashboardData, setDashboardData] = useState({
     summary: { totalAssets: 0, activeAllocations: 0, pendingRequests: 0, overdueReturns: 0, utilizationRate: 0 },
     topUtilized: [],
@@ -50,12 +51,14 @@ function App() {
   const [newCategory, setNewCategory] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newQty, setNewQty] = useState(1);
+  const [newHealthStatus, setNewHealthStatus] = useState('Perfect');
 
   const [editingAssetId, setEditingAssetId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editQty, setEditQty] = useState(1);
+  const [editHealthStatus, setEditHealthStatus] = useState('Perfect');
 
   const [bookingDurations, setBookingDurations] = useState({});
   const [bookingQuantities, setBookingQuantities] = useState({}); // <-- ONLY NEW STATE
@@ -70,7 +73,7 @@ function App() {
         setDashboardData(res.data);
         axios.get(`${BACKEND_URL}/api/assets`).then(r => setAssets(r.data));
         axios.get(`${BACKEND_URL}/api/bookings`).then(r => setBookings(r.data));
-        axios.get(`${BACKEND_URL}/api/audit-logs`).then(r => setAuditLogs(r.data));
+        axios.get(`${BACKEND_URL}/api/audit-logs?timeframe=${selectedAuditTimeframe}`).then(r => setAuditLogs(r.data));
         
         if (userId) {
           axios.get(`${BACKEND_URL}/api/bookings/history/${userId}`).then(r => setUserHistory(r.data));
@@ -97,7 +100,7 @@ function App() {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, selectedAuditTimeframe]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -137,10 +140,10 @@ function App() {
 
   const handleAddAsset = (e) => {
     e.preventDefault();
-    axios.post(`${BACKEND_URL}/api/assets`, { name: newName, category: newCategory, description: newDesc, quantityAvailable: Number(newQty), status: "Available" })
+    axios.post(`${BACKEND_URL}/api/assets`, { name: newName, category: newCategory, description: newDesc, quantityAvailable: Number(newQty), healthStatus: newHealthStatus, status: "Available" })
       .then(() => {
         alert("Asset added successfully!");
-        setNewName(''); setNewCategory(''); setNewDesc(''); setNewQty(1);
+        setNewName(''); setNewCategory(''); setNewDesc(''); setNewQty(1); setNewHealthStatus('Perfect');
         fetchAllData(user?.id);
       });
   };
@@ -151,6 +154,7 @@ function App() {
     setEditCategory(asset.category);
     setEditDesc(asset.description);
     setEditQty(asset.quantityAvailable);
+    setEditHealthStatus(asset.healthStatus || 'Perfect');
   };
 
   const handleUpdateAsset = (e) => {
@@ -160,6 +164,7 @@ function App() {
       category: editCategory,
       description: editDesc,
       quantityAvailable: Number(editQty),
+      healthStatus: editHealthStatus,
       status: Number(editQty) > 0 ? "Available" : "Out of Stock"
     })
     .then(() => {
@@ -221,6 +226,18 @@ function App() {
   const handleUpdateStatus = (bookingId, status) => {
     axios.put(`${BACKEND_URL}/api/bookings/${bookingId}/status`, { status })
       .then(() => { fetchAllData(user?.id); });
+  };
+
+  const handleUpdateAssetHealth = (assetId, healthStatus) => {
+    const asset = assets.find(item => item._id === assetId);
+    if (!asset) return;
+
+    axios.put(`${BACKEND_URL}/api/assets/${assetId}`, {
+      ...asset,
+      healthStatus
+    })
+    .then(() => { fetchAllData(user?.id); })
+    .catch((err) => alert("Failed to update health: " + err.response?.data?.error));
   };
 
   const filteredAssets = assets.filter(item => {
@@ -310,6 +327,19 @@ function App() {
     );
   }
 
+  const navButtonStyle = (tabName) => ({
+    padding: '10px 16px',
+    borderRadius: '8px',
+    border: activeTab === tabName ? '1px solid #1e293b' : '1px solid #cbd5e1',
+    background: activeTab === tabName ? '#1e293b' : '#fff',
+    color: activeTab === tabName ? '#fff' : '#334155',
+    cursor: 'pointer',
+    fontWeight: '700',
+    boxShadow: activeTab === tabName ? '0 6px 14px rgba(30,41,59,0.18)' : 'none'
+  });
+
+  const borrowedAssetBookings = bookings.filter(b => b.status === 'Approved');
+
   // ================= STAGE 2: CLASSIC DASHBOARD INTERFACE =================
   return (
     <div style={{ padding: '30px', fontFamily: 'Segoe UI, sans-serif', maxWidth: '1150px', margin: '0 auto', background: '#f8fafc', minHeight: '100vh' }}>
@@ -332,19 +362,25 @@ function App() {
       </div>
 
       {/* --- NEW TABBED NAVIGATION MENU --- */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
-        <button onClick={() => setActiveTab('discover')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Discover Inventories</button>
-        <button onClick={() => setActiveTab('issuance')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Issuance</button>
-        <button onClick={() => setActiveTab('audit')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Audit Logs</button>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', flexWrap: 'wrap' }}>
+        <button onClick={() => setActiveTab('discover')} style={navButtonStyle('discover')}>Discover Inventories</button>
+        {user && user.role === 'Admin' && (
+          <button onClick={() => setActiveTab('issuance')} style={navButtonStyle('issuance')}>Issuance</button>
+        )}
+        {user && user.role === 'Admin' && (
+          <button onClick={() => setActiveTab('audit')} style={navButtonStyle('audit')}>Audit Logs</button>
+        )}
         
         {/* Hides Personal Log if the user is an Admin */}
         {user && user.role !== 'Admin' && (
-          <button onClick={() => setActiveTab('personal')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }}>Your Personal Log</button>
+          <button onClick={() => setActiveTab('personal')} style={navButtonStyle('personal')}>Your Personal Log</button>
         )}
       </div>
 
       {/* The rest of your code (like the activeTab wrappers) will go right below this! */}
 
+      {activeTab === 'discover' && (
+        <>
       {/* INSIGHTS SUMMARIES CARD NODES */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderTop: '4px solid #3b82f6' }}>
@@ -371,7 +407,7 @@ function App() {
       {/* METERS BREAKDOWN CHANNELS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '30px' }}>
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h3 style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#1e293b', textTransform: 'uppercase' }}>🔥 High-Demand Hotspots (Most Utilized)</h3>
+          <h3 style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#1e293b', textTransform: 'uppercase' }}>High-Demand Hotspots (Most Utilized)</h3>
           {dashboardData.topUtilized.length === 0 ? <p style={{ fontSize: '13px', color: '#94a3b8' }}>Insufficient logs to rank utilization performance.</p> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {dashboardData.topUtilized.map((item, idx) => (
@@ -401,7 +437,7 @@ function App() {
 
       {editingAssetId && (
         <div style={{ background: '#fffbeb', padding: '20px', borderRadius: '12px', border: '1px solid #fcd34d', marginBottom: '25px' }}>
-          <h3 style={{ marginTop: 0, color: '#b45309', fontSize: '16px' }}>📝 Modify Asset Information Form</h3>
+          <h3 style={{ marginTop: 0, color: '#b45309', fontSize: '16px' }}> Modify Asset Information Form</h3>
           <form onSubmit={handleUpdateAsset} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }} placeholder="Asset Name" required />
             <select value={editCategory} onChange={(e) => setEditCategory(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }} required>
@@ -411,6 +447,12 @@ function App() {
             </select>
             <input type="text" value={editDesc} onChange={(e) => setEditDesc(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', flex: 1 }} placeholder="Specification Description" required />
             <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', width: '80px' }} min="0" required />
+            <select value={editHealthStatus} onChange={(e) => setEditHealthStatus(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }} required>
+              <option value="Perfect">Perfect</option>
+              <option value="Good">Good</option>
+              <option value="Needs Repair">Needs Repair</option>
+              <option value="Damaged">Damaged</option>
+            </select>
             <button type="submit" style={{ background: '#d97706', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Apply Edits</button>
             <button type="button" onClick={() => setEditingAssetId(null)} style={{ background: '#cbd5e1', color: '#1e293b', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
           </form>
@@ -418,7 +460,7 @@ function App() {
       )}
 
       {/* CORE DISPLAY HOOK STREAM WINDOWS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: user.role === 'Admin' ? '1fr 320px' : '1fr', gap: '30px', alignItems: 'start' }}>
         <div>
           <div style={{ background: '#fff', padding: '15px', borderRadius: '12px', display: 'flex', gap: '15px', marginBottom: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <input type="text" placeholder="Search asset name or info codes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ flex: 2, padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
@@ -432,14 +474,14 @@ function App() {
 
           <h2 style={{ fontSize: '18px', color: '#334155', marginBottom: '15px' }}> Live Discoverable Inventory</h2>
           {loading && Object.keys(dashboardData.summary).length === 0 ? <p>Loading data layers...</p> : (
-            <div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '16px' }}>
               {filteredAssets.map(item => (
-                <div key={item._id} style={{ background: '#fff', padding: '20px', borderRadius: '12px', marginBottom: '15px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+                <div key={item._id} style={{ background: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
                       <span style={{ fontSize: '11px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '12px', color: '#64748b', fontWeight: 'bold' }}>{item.category}</span>
                       <h3 style={{ margin: '5px 0', fontSize: '16px', color: '#1e293b' }}>{item.name}</h3>
-                      {item.quantityAvailable < 1 && <HealthBadge status={item.healthStatus} />}
+                      <div style={{ marginBottom: '8px' }}><HealthBadge status={item.healthStatus} /></div>
                       <p style={{ margin: '0', fontSize: '13px', color: '#64748b' }}>{item.description}</p>
                       <p style={{ margin: '5px 0 0 0', fontSize: '12px', fontWeight: '500', color: item.quantityAvailable > 0 ? '#10b981' : '#ef4444' }}>Available Units: {item.quantityAvailable}</p>
                     </div>
@@ -461,7 +503,7 @@ function App() {
                       <input type="date" onChange={(e) => handleDurationChange(item._id, 'end', e.target.value)} value={bookingDurations[item._id]?.end || ''} style={{ padding: '4px', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
                     </div>
                     
-                    {/* 🆕 THE QUANTITY BOX */}
+                    {/*  THE QUANTITY BOX */}
                     <div style={{ display: 'flex', gap: '5px', alignItems: 'center', fontSize: '12px', color: '#64748b' }}>
                       <label>Req Qty:</label>
                       <input 
@@ -494,6 +536,12 @@ function App() {
                   <option value="Infrastructure">Infrastructure</option>
                   <option value="Lab Equipment">Lab Equipment</option>
                 </select>
+                <select value={newHealthStatus} onChange={(e) => setNewHealthStatus(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#fff' }} required>
+                  <option value="Perfect">Perfect Health</option>
+                  <option value="Good">Good Health</option>
+                  <option value="Needs Repair">Needs Repair</option>
+                  <option value="Damaged">Damaged</option>
+                </select>
                 <input type="text" placeholder="Description Specification" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} required />
                 <input type="number" placeholder="Bulk Quantity" min="1" value={newQty} onChange={(e) => setNewQty(e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} required />
                 <button type="submit" style={{ padding: '10px', background: '#1e293b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Register Asset</button>
@@ -501,7 +549,7 @@ function App() {
             </div>
           )}
 
-          {user && (
+          {user && user.role !== 'Admin' && false && (
             <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               <h3 style={{ marginTop: 0, fontSize: '15px', color: '#1e293b' }}> Your Personal Borrowing History</h3>
               {userHistory.length === 0 ? <p style={{ fontSize: '13px', color: '#64748b' }}>No record logs logged under this profile ticket.</p> : (
@@ -521,17 +569,61 @@ function App() {
           )}
         </div>
       </div>
+        </>
+      )}
+
+      {activeTab === 'personal' && user && user.role !== 'Admin' && (
+        <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+          <h2 style={{ marginTop: 0, fontSize: '18px', color: '#1e293b' }}>Your Personal Borrowing History</h2>
+          {userHistory.length === 0 ? <p style={{ fontSize: '13px', color: '#64748b' }}>No record logs logged under this profile ticket.</p> : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+              {userHistory.map(h => (
+                <div key={h._id} style={{ padding: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px' }}>
+                  <strong>{h.asset?.name || 'Purged Asset'} (Qty: {h.quantity || 1})</strong>
+                  <div style={{ marginTop: '8px' }}><HealthBadge status={h.asset?.healthStatus} /></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: '500' }}>Due: {new Date(h.endDate).toLocaleDateString()}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 'bold', color: h.status === 'Returned' ? '#10b981' : '#f59e0b' }}>{h.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* OPERATIONS MANAGEMENT ADMIN PANEL GRID */}
-      {user && user.role === 'Admin' && (
+      {activeTab === 'issuance' && user && user.role === 'Admin' && (
         <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', marginTop: '30px', border: '1px solid #e2e8f0' }}>
           <h2 style={{ marginTop: 0, fontSize: '16px', color: '#1e293b' }}>🛡️ Enterprise Operations Authorization & Asset Issuance Logs</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', margin: '18px 0' }}>
+            {borrowedAssetBookings.length === 0 ? (
+              <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px' }}>No borrowed assets are currently active.</div>
+            ) : borrowedAssetBookings.map(b => (
+              <div key={`health-${b._id}`} style={{ padding: '14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{b.asset?.name || 'Purged Asset'}</div>
+                <div style={{ fontSize: '11px', color: '#64748b', margin: '4px 0 10px' }}>Borrowed by {b.user?.name || 'Unknown User'}</div>
+                <select
+                  value={b.asset?.healthStatus || 'Perfect'}
+                  onChange={(e) => handleUpdateAssetHealth(b.asset?._id, e.target.value)}
+                  disabled={!b.asset?._id}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff' }}
+                >
+                  <option value="Perfect">Perfect</option>
+                  <option value="Good">Good</option>
+                  <option value="Needs Repair">Needs Repair</option>
+                  <option value="Damaged">Damaged</option>
+                </select>
+              </div>
+            ))}
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px', fontSize: '13px', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>User</th>
                   <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Requested Item (Qty)</th>
+                  <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Asset Health</th>
                   <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Allocation Duration Window</th>
                   <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0' }}>Status State</th>
                   <th style={{ padding: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Actions</th>
@@ -542,6 +634,7 @@ function App() {
                   <tr key={b._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '10px' }}>{b.user?.name}</td>
                     <td style={{ padding: '10px' }}>{b.asset?.name} (x{b.quantity || 1})</td>
+                    <td style={{ padding: '10px' }}><HealthBadge status={b.asset?.healthStatus} /></td>
                     <td style={{ padding: '10px', color: '#475569' }}>
                       {new Date(b.startDate).toLocaleDateString()} to <strong style={{ color: '#ef4444' }}>{new Date(b.endDate).toLocaleDateString()}</strong>
                     </td>
@@ -569,7 +662,7 @@ function App() {
       )}
 
       {/* ================= GLOBAL SECURITY AUDIT LOG TRAIL ================= */}
-      {user && user.role === 'Admin' && (
+      {activeTab === 'audit' && user && user.role === 'Admin' && (
         <div style={{ background: '#0f172a', color: '#cbd5e1', padding: '25px', borderRadius: '12px', marginTop: '30px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
             <div>
@@ -577,16 +670,28 @@ function App() {
               <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: '#64748b' }}>Showing {filteredAuditLogs.length} matching event logs</p>
             </div>
             
-            <select 
-              value={selectedActionFilter} 
-              onChange={(e) => setSelectedActionFilter(e.target.value)}
-              style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
-            >
-              <option value="All Actions">All Actions</option>
-              <option value="USER REGISTERED">USER REGISTERED</option>
-              <option value="USER LOGGED IN">USER LOGGED IN</option>
-              <option value="ASSET BOOKED">ASSET BOOKED</option>
-            </select>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <select 
+                value={selectedAuditTimeframe} 
+                onChange={(e) => setSelectedAuditTimeframe(e.target.value)}
+                style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                <option value="today">Today</option>
+                <option value="week">Last Week</option>
+                <option value="month">Last Month</option>
+                <option value="all">All Logs</option>
+              </select>
+              <select 
+                value={selectedActionFilter} 
+                onChange={(e) => setSelectedActionFilter(e.target.value)}
+                style={{ background: '#1e293b', color: '#fff', border: '1px solid #334155', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                <option value="All Actions">All Actions</option>
+                <option value="USER REGISTERED">USER REGISTERED</option>
+                <option value="USER LOGGED IN">USER LOGGED IN</option>
+                <option value="ASSET BOOKED">ASSET BOOKED</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ overflowX: 'auto' }}>

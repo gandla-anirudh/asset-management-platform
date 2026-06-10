@@ -4,7 +4,7 @@ An institutional-grade resource reservation system with role-based privileges, d
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 - **Frontend:** React, Axios, HTML5, CSS3
 - **Backend:** Node.js, Express.js
 - **Database:** MongoDB Atlas via Mongoose ORM
@@ -12,7 +12,7 @@ An institutional-grade resource reservation system with role-based privileges, d
 
 ---
 
-## 🚀 Setup & Installation Instructions
+## Setup & Installation Instructions
 
 Follow these steps to reproduce and run this application locally or in a cloud container environment:
 

@@ -14,9 +14,9 @@ app.use(cors());
 // ================= DATABASE CONNECTION =================
 const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://admin:Mypassword123@cluster0.xxxmaws.mongodb.net/?appName=Cluster0/asset_management';
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('📁 MongoDB data tier successfully connected...'))
+  .then(() => console.log(' MongoDB data tier successfully connected...'))
   .catch((err) => {
-    console.log('⚠️ Local MongoDB Service not detected. Check connection string!');
+    console.log(' Local MongoDB Service not detected. Check connection string!');
   });
 
 // ================= SCHEMAS =================
@@ -165,14 +165,14 @@ app.post('/api/bookings', async (req, res) => {
 
 app.get('/api/bookings', async (req, res) => {
   try {
-    const bookings = await Booking.find().populate('user', 'name').populate('asset', 'name');
+    const bookings = await Booking.find().populate('user', 'name').populate('asset', 'name healthStatus category');
     res.status(200).json(bookings);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
 app.get('/api/bookings/history/:userId', async (req, res) => {
   try {
-    const userHistory = await Booking.find({ user: req.params.userId }).populate('asset', 'name');
+    const userHistory = await Booking.find({ user: req.params.userId }).populate('asset', 'name healthStatus category');
     res.status(200).json(userHistory);
   } catch (error) { res.status(500).json({ error: error.message }); }
 });
@@ -243,17 +243,17 @@ app.get('/api/audit-logs', async (req, res) => {
     // Check what the frontend is asking for
     if (timeframe === 'today') {
       const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-      query.createdAt = { $gte: startOfDay };
+      query.timestamp = { $gte: startOfDay };
     } else if (timeframe === 'week') {
       const lastWeek = new Date(now.setDate(now.getDate() - 7));
-      query.createdAt = { $gte: lastWeek };
+      query.timestamp = { $gte: lastWeek };
     } else if (timeframe === 'month') {
       const lastMonth = new Date(now.setMonth(now.getMonth() - 1));
-      query.createdAt = { $gte: lastMonth };
+      query.timestamp = { $gte: lastMonth };
     }
 
     // Fetch from MongoDB using the time filter
-    const logs = await AuditLog.find(query).sort({ createdAt: -1 });
+    const logs = await AuditLog.find(query).sort({ timestamp: -1 });
     res.json(logs);
   } catch (error) {
     res.status(500).json({ message: "Error fetching logs" });
